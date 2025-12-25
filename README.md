@@ -1,37 +1,42 @@
 # 游戏爬虫控制台 (Game Crawler Console)
 
-这是一个基于 Python Flask 和 Playwright 的网页爬虫工具，专门用于抓取游戏网站的数据。它提供了一个 Web 界面来管理任务、监控进度、处理失败项目以及导出数据。
+## 前言
 
-## 功能特点
+由于小时候在诺基亚按键手机玩到一款[有意思的游戏](https://zaixianwan.app/games/46923)，但我一直都找不到这个游戏，偶然发现这个[网站](https://zaixianwan.app/)有很多[j2me游戏](https://zaixianwan.app/consoles/j2me)，我想找尝试寻找一下，奈何只知道大概的游戏内容，网站数据太多，无法检索，于是写了个脚本，获取数据，导出excel，再交给AI分析寻找。
+还真被我找到了，啊啊啊啊啊，全是回忆啊。
 
-*   **Web 管理界面**: 直观的操作界面，支持任务创建、暂停、继续和停止。
-*   **断点续传**: 自动保存进度，随时可以暂停和恢复。
-*   **失败重试**: 自动记录抓取失败的项目，支持一键将失败项目加入重试队列。
-*   **数据完整性检查**: 扫描已抓取的数据，找出缺失的 ID 或无效内容（如标题为空），并将其加入重试队列。
-*   **Excel 导出**: 将抓取的数据导出为 Excel 文件，自动处理非法字符。
-*   **并发控制**: 单线程运行，避免对目标网站造成过大压力，支持自定义延迟。
 
 ## 安装与运行
 
-1.  **安装依赖**:
-    ```bash
+1.  **克隆项目到本地**:
+    ```powershell
+    git clone https://github.com/Space3044/GAME-J2ME-Crawler.git
+    ```
+   
+2.  **安装依赖**:
+    ```powershell
+    python -m venv .venv
+    .venv\Scripts\Activate.ps1
     pip install -r requirements.txt
     playwright install chromium
     ```
 
-2.  **运行程序**:
-    ```bash
+3.  **运行程序**:
+    ```powershell
     python app.py
     ```
 
-3.  **访问界面**:
+4.  **访问界面**:
     打开浏览器访问 `http://localhost:5000`
 
 ## 使用指南
 
 ### 1. 创建任务
-*   在左侧面板输入任务名称（可选）。
-*   输入起始 ID 和终止 ID（例如 31895 到 47658）。
+*   在左侧面板选择任务类型【下图红圈】。
+    ![图1](assets/image1.png)
+*   输入目标名称（URL中的名称）【下图绿圈】。
+    ![图2](assets/image2.png)
+*   输入起始页和终止页
 *   点击“创建任务”。
 
 ### 2. 控制爬虫
@@ -51,6 +56,23 @@
 
 ### 4. 数据导出
 *   点击“导出 Excel”按钮下载当前任务的所有数据。
+
+## 实操
+1.  **寻找对应需要的值**
+    ![alt text](assets/image-1.png)
+
+2.  **填入值并创建任务**
+    ![alt text](assets/image-2.png)
+
+3.  **启动爬虫**
+    ![alt text](assets/image-3.png)
+
+4.  **导出数据**
+    ![alt text](assets/image-4.png)
+
+5.  **分析数据**
+    ![alt text](assets/image-5.png)
+    ![alt text](assets/image-6.png)
 
 ## 文件结构
 

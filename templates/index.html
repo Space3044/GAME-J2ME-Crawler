@@ -1,612 +1,822 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-bs-theme="light">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>游戏爬虫控制台</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
     <style>
-        body { background-color: #f8f9fa; padding: 20px; transition: background-color 0.3s; }
-        .card { margin-bottom: 1rem; transition: background-color 0.3s, border-color 0.3s; }
-        .log-box {
-            height: 300px;
-            overflow-y: auto;
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-            padding: 10px;
-            font-family: monospace;
-            font-size: 0.9rem;
-        }
-        .status-badge { font-size: 0.9em; }
-        
-        /* Dark Mode Overrides */
-        [data-bs-theme="dark"] body { background-color: #212529; color: #e9ecef; }
-        [data-bs-theme="dark"] .log-box { background-color: #2b3035; border-color: #495057; color: #e9ecef; }
-        [data-bs-theme="dark"] .card { background-color: #2b3035; border-color: #495057; }
-        [data-bs-theme="dark"] .list-group-item { background-color: #2b3035; border-color: #495057; color: #e9ecef; }
-        [data-bs-theme="dark"] .list-group-item-action:hover { background-color: #343a40; }
-        [data-bs-theme="dark"] .list-group-item.active { background-color: #373b3e; border-color: #495057; color: #fff; }
-        /* Light mode active override */
-        .list-group-item.active { background-color: #e9ecef; border-color: #dee2e6; color: #000; }
-        
-        /* Preview Box Dark Mode */
-        [data-bs-theme="dark"] .preview-box { background-color: #2b3035 !important; border-color: #495057; color: #e9ecef; }
-        .preview-box { background-color: #f8f9fa; }
+      body {
+        background-color: #f8f9fa;
+        padding: 20px;
+        transition: background-color 0.3s;
+      }
+      .card {
+        margin-bottom: 1rem;
+        transition: background-color 0.3s, border-color 0.3s;
+      }
+      .log-box {
+        height: 300px;
+        overflow-y: auto;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        padding: 10px;
+        font-family: monospace;
+        font-size: 0.9rem;
+      }
+      .status-badge {
+        font-size: 0.9em;
+      }
+
+      /* Dark Mode Overrides */
+      [data-bs-theme="dark"] body {
+        background-color: #212529;
+        color: #e9ecef;
+      }
+      [data-bs-theme="dark"] .log-box {
+        background-color: #2b3035;
+        border-color: #495057;
+        color: #e9ecef;
+      }
+      [data-bs-theme="dark"] .card {
+        background-color: #2b3035;
+        border-color: #495057;
+      }
+      [data-bs-theme="dark"] .list-group-item {
+        background-color: #2b3035;
+        border-color: #495057;
+        color: #e9ecef;
+      }
+      [data-bs-theme="dark"] .list-group-item-action:hover {
+        background-color: #343a40;
+      }
+      [data-bs-theme="dark"] .list-group-item.active {
+        background-color: #373b3e;
+        border-color: #495057;
+        color: #fff;
+      }
+      /* Light mode active override */
+      .list-group-item.active {
+        background-color: #e9ecef;
+        border-color: #dee2e6;
+        color: #000;
+      }
+
+      /* Preview Box Dark Mode */
+      [data-bs-theme="dark"] .preview-box {
+        background-color: #2b3035 !important;
+        border-color: #495057;
+        color: #e9ecef;
+      }
+      .preview-box {
+        background-color: #f8f9fa;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1>游戏爬虫控制台</h1>
-            <button class="btn btn-outline-secondary" onclick="toggleDarkMode()">
-                <span id="darkModeIcon">🌙</span> 切换模式
-            </button>
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>游戏爬虫控制台</h1>
+        <button class="btn btn-outline-secondary" onclick="toggleDarkMode()">
+          <span id="darkModeIcon">🌙</span> 切换模式
+        </button>
+      </div>
+
+      <div class="row">
+        <!-- Left Column: Task Management -->
+        <div class="col-md-4">
+          <div class="card">
+            <div class="card-header" id="taskFormHeader">新建任务</div>
+            <div class="card-body">
+              <input type="hidden" id="editTaskFilename" value="" />
+              <div class="mb-3">
+                <label class="form-label">任务类型</label>
+                <select class="form-select" id="taskType">
+                  <option value="series">游戏系列 (Series)</option>
+                  <option value="consoles">游戏类型 (Consoles)</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">目标名称 (URL中的名称)</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="targetName"
+                  placeholder="例如: mario 或 nes"
+                />
+              </div>
+              <!-- Task Name input removed -->
+              <div class="row">
+                <div class="col-6 mb-3">
+                  <label class="form-label">起始页码</label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    id="startPage"
+                    min="1"
+                    value="1"
+                  />
+                </div>
+                <div class="col-6 mb-3">
+                  <label class="form-label">终止页码</label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    id="endPage"
+                    min="1"
+                    placeholder="例如: 10"
+                  />
+                </div>
+              </div>
+              <div class="d-grid gap-2">
+                <button
+                  class="btn btn-primary"
+                  id="btnCreateTask"
+                  onclick="createTask()"
+                >
+                  创建任务
+                </button>
+                <button
+                  class="btn btn-success"
+                  id="btnUpdateTask"
+                  onclick="updateTask()"
+                  style="display: none"
+                >
+                  保存修改
+                </button>
+                <button
+                  class="btn btn-outline-secondary"
+                  id="btnCancelEdit"
+                  onclick="cancelEdit()"
+                  style="display: none"
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              任务列表
+              <button
+                class="btn btn-sm btn-outline-secondary float-end"
+                onclick="loadTaskList()"
+              >
+                刷新
+              </button>
+            </div>
+            <div class="card-body p-0">
+              <div class="list-group list-group-flush" id="taskList">
+                <!-- Tasks will be loaded here -->
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="row">
-            <!-- Left Column: Task Management -->
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-header" id="taskFormHeader">
-                        新建任务
-                    </div>
-                    <div class="card-body">
-                        <input type="hidden" id="editTaskFilename" value="">
-                        <div class="mb-3">
-                            <label class="form-label">任务名称 (可选)</label>
-                            <input type="text" class="form-control" id="taskName" placeholder="默认自动命名">
-                        </div>
-                        <div class="row">
-                            <div class="col-6 mb-3">
-                                <label class="form-label">起始 ID</label>
-                                <input type="number" class="form-control" id="startId" min="1" placeholder="例如: 31895">
-                            </div>
-                            <div class="col-6 mb-3">
-                                <label class="form-label">终止 ID</label>
-                                <input type="number" class="form-control" id="endId" min="1" placeholder="例如: 47658">
-                            </div>
-                        </div>
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-primary" id="btnCreateTask" onclick="createTask()">创建任务</button>
-                            <button class="btn btn-success" id="btnUpdateTask" onclick="updateTask()" style="display:none;">保存修改</button>
-                            <button class="btn btn-outline-secondary" id="btnCancelEdit" onclick="cancelEdit()" style="display:none;">取消</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">
-                        任务列表
-                        <button class="btn btn-sm btn-outline-secondary float-end" onclick="loadTaskList()">刷新</button>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="list-group list-group-flush" id="taskList">
-                            <!-- Tasks will be loaded here -->
-                        </div>
-                    </div>
-                </div>
+        <!-- Right Column: Crawler Control & Status -->
+        <div class="col-md-8">
+          <div class="card">
+            <div
+              class="card-header d-flex justify-content-between align-items-center"
+            >
+              <div class="d-flex align-items-center">
+                <span class="me-2">当前任务:</span>
+                <strong id="activeTaskName" class="me-2">未选择</strong>
+                <button
+                  class="btn btn-sm btn-link p-0 text-decoration-none"
+                  onclick="renameActiveTask()"
+                  id="renameBtn"
+                  style="display: none"
+                >
+                  ✏️
+                </button>
+              </div>
+              <span
+                id="crawlerStatusBadge"
+                class="badge bg-secondary status-badge"
+                >未运行</span
+              >
             </div>
-
-            <!-- Right Column: Crawler Control & Status -->
-            <div class="col-md-8">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <div class="d-flex align-items-center">
-                            <span class="me-2">当前任务:</span>
-                            <strong id="activeTaskName" class="me-2">未选择</strong>
-                            <button class="btn btn-sm btn-link p-0 text-decoration-none" onclick="renameActiveTask()" id="renameBtn" style="display:none;">✏️</button>
-                        </div>
-                        <span id="crawlerStatusBadge" class="badge bg-secondary status-badge">未运行</span>
+            <div class="card-body">
+              <div id="controlPanel" style="display: none">
+                <div class="row mb-3">
+                  <div class="col-md-3">
+                    <div class="d-grid gap-2">
+                      <button
+                        class="btn btn-success"
+                        id="btnStart"
+                        onclick="startCrawler()"
+                      >
+                        开始/继续
+                      </button>
                     </div>
-                    <div class="card-body">
-                        <div id="controlPanel" style="display: none;">
-                            <div class="row mb-3">
-                                <div class="col-md-3">
-                                    <div class="d-grid gap-2">
-                                        <button class="btn btn-success" id="btnStart" onclick="startCrawler()">开始/继续</button>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="d-grid gap-2">
-                                        <button class="btn btn-warning" id="btnPause" onclick="pauseCrawler()">暂停</button>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="d-grid gap-2">
-                                        <button class="btn btn-danger" id="btnStop" onclick="stopCrawler()">停止</button>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="d-grid gap-2">
-                                        <button class="btn btn-info text-white" onclick="exportTask()">导出 Excel</button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <div class="input-group">
-                                        <span class="input-group-text">延迟 (秒)</span>
-                                        <input type="number" class="form-control" id="delayInput" value="1.0" step="0.1" min="0.1">
-                                        <button class="btn btn-outline-secondary" onclick="setDelay()">设置</button>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 text-end">
-                                    <div class="btn-group">
-                                        <button class="btn btn-outline-warning" onclick="checkIntegrity()">检查缺漏/错误</button>
-                                        <button class="btn btn-outline-danger" onclick="retryFailed()">重试失败项目 (<span id="failedCount">0</span>)</button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="progress mb-3" style="height: 25px;">
-                                <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%">0%</div>
-                            </div>
-
-                            <div class="row text-center mb-3">
-                                <div class="col-3">
-                                    <small class="text-muted">当前 ID</small>
-                                    <div class="h5" id="currentId">-</div>
-                                </div>
-                                <div class="col-3">
-                                    <small class="text-muted">已抓取</small>
-                                    <div class="h5" id="crawledCount">0</div>
-                                </div>
-                                <div class="col-3">
-                                    <small class="text-muted" title="重试队列中的数量">重试队列</small>
-                                    <div class="h5" id="queueSize">0</div>
-                                </div>
-                                <div class="col-3">
-                                    <small class="text-muted">总进度</small>
-                                    <div class="h5"><span id="progressText">0/0</span></div>
-                                </div>
-                            </div>
-
-                            <div class="card preview-box mb-3">
-                                <div class="card-body py-2">
-                                    <small class="text-muted d-block">当前 URL</small>
-                                    <div class="text-truncate">
-                                        <a href="#" id="currentUrlLink" target="_blank" class="text-decoration-none">-</a>
-                                    </div>
-                                    
-                                    <small class="text-muted d-block mt-1">当前标题</small>
-                                    <div class="text-truncate fw-bold" id="currentTitle">-</div>
-                                    
-                                    <small class="text-muted d-block mt-1">简介预览</small>
-                                    <div class="text-truncate small text-secondary" id="currentDesc" style="max-height: 3em; overflow: hidden;">-</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div id="noTaskPanel" class="text-center py-5 text-muted">
-                            请从左侧列表选择一个任务或创建一个新任务
-                        </div>
-
-                        <h6>运行日志</h6>
-                        <div class="log-box" id="logBox"></div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="d-grid gap-2">
+                      <button
+                        class="btn btn-warning"
+                        id="btnPause"
+                        onclick="pauseCrawler()"
+                      >
+                        暂停
+                      </button>
                     </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="d-grid gap-2">
+                      <button
+                        class="btn btn-danger"
+                        id="btnStop"
+                        onclick="stopCrawler()"
+                      >
+                        停止
+                      </button>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="d-grid gap-2">
+                      <button
+                        class="btn btn-info text-white"
+                        onclick="exportTask()"
+                      >
+                        导出 Excel
+                      </button>
+                    </div>
+                  </div>
                 </div>
+
+                <div class="row mb-3">
+                  <div class="col-md-6">
+                    <div class="input-group">
+                      <span class="input-group-text">延迟 (秒)</span>
+                      <input
+                        type="number"
+                        class="form-control"
+                        id="delayInput"
+                        value="1.0"
+                        step="0.1"
+                        min="0.1"
+                      />
+                      <button
+                        class="btn btn-outline-secondary"
+                        onclick="setDelay()"
+                      >
+                        设置
+                      </button>
+                    </div>
+                  </div>
+                  <div class="col-md-6 text-end">
+                    <div class="btn-group">
+                      <button
+                        class="btn btn-outline-warning"
+                        onclick="checkIntegrity()"
+                      >
+                        检查缺漏/错误
+                      </button>
+                      <button
+                        class="btn btn-outline-danger"
+                        onclick="retryFailed()"
+                      >
+                        重试失败项目 (<span id="failedCount">0</span>)
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="progress mb-3" style="height: 25px">
+                  <div
+                    id="progressBar"
+                    class="progress-bar progress-bar-striped progress-bar-animated"
+                    role="progressbar"
+                    style="width: 0%"
+                  >
+                    0%
+                  </div>
+                </div>
+
+                <div class="row text-center mb-3">
+                  <div class="col-3">
+                    <small class="text-muted">当前 ID</small>
+                    <div class="h5" id="currentId">-</div>
+                  </div>
+                  <div class="col-3">
+                    <small class="text-muted">已抓取游戏</small>
+                    <div class="h5" id="crawledCount">0</div>
+                  </div>
+                  <div class="col-3">
+                    <small class="text-muted" title="重试队列中的数量"
+                      >重试队列</small
+                    >
+                    <div class="h5" id="queueSize">0</div>
+                  </div>
+                  <div class="col-3">
+                    <small class="text-muted">页码进度</small>
+                    <div class="h5"><span id="progressText">0/0</span></div>
+                  </div>
+                </div>
+
+                <div class="card preview-box mb-3">
+                  <div class="card-body py-2">
+                    <small class="text-muted d-block">当前 URL</small>
+                    <div class="text-truncate">
+                      <a
+                        href="#"
+                        id="currentUrlLink"
+                        target="_blank"
+                        class="text-decoration-none"
+                        >-</a
+                      >
+                    </div>
+
+                    <small class="text-muted d-block mt-1">当前标题</small>
+                    <div class="text-truncate fw-bold" id="currentTitle">-</div>
+
+                    <small class="text-muted d-block mt-1">简介预览</small>
+                    <div
+                      class="text-truncate small text-secondary"
+                      id="currentDesc"
+                      style="max-height: 3em; overflow: hidden"
+                    >
+                      -
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div id="noTaskPanel" class="text-center py-5 text-muted">
+                请从左侧列表选择一个任务或创建一个新任务
+              </div>
+
+              <h6>运行日志</h6>
+              <div class="log-box" id="logBox"></div>
             </div>
+          </div>
         </div>
+      </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        let activeTaskFilename = null;
-        let statusInterval = null;
-        let lastStatus = null;
+      let activeTaskFilename = null;
+      let statusInterval = null;
+      let lastStatus = null;
 
-        // --- Dark Mode ---
-        function toggleDarkMode() {
-            const html = document.documentElement;
-            const currentTheme = html.getAttribute('data-bs-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            html.setAttribute('data-bs-theme', newTheme);
-            document.getElementById('darkModeIcon').innerText = newTheme === 'dark' ? '☀️' : '🌙';
-        }
+      // --- Dark Mode ---
+      function toggleDarkMode() {
+        const html = document.documentElement;
+        const currentTheme = html.getAttribute("data-bs-theme");
+        const newTheme = currentTheme === "dark" ? "light" : "dark";
+        html.setAttribute("data-bs-theme", newTheme);
+        document.getElementById("darkModeIcon").innerText =
+          newTheme === "dark" ? "☀️" : "🌙";
+      }
 
-        // --- Task Management ---
+      // --- Task Management ---
 
-        async function loadTaskList() {
-            try {
-                const res = await fetch('/api/tasks');
-                const tasks = await res.json();
-                const list = document.getElementById('taskList');
-                list.innerHTML = '';
-                
-                tasks.forEach(task => {
-                    const activeClass = task.is_active ? 'active' : '';
-                    // Format date nicely if possible, or just use raw
-                    const dateStr = task.created_at.replace(/(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/, '$1-$2-$3 $4:$5');
-                    
-                    // Use task name as display name
-                    const displayName = task.name || task.filename.replace('.json', '');
-                    
-                    let statusBadge = '';
-                    if (task.status === 'completed') {
-                        statusBadge = '<span class="badge bg-success ms-1" style="font-size: 0.6rem;">已完成</span>';
-                    }
+      async function loadTaskList() {
+        try {
+          const res = await fetch("/api/tasks");
+          const tasks = await res.json();
+          const list = document.getElementById("taskList");
+          list.innerHTML = "";
 
-                    const item = document.createElement('div');
-                    item.className = `list-group-item list-group-item-action ${activeClass}`;
-                    item.innerHTML = `
-                        <div class="d-flex w-100 justify-content-between align-items-center mb-1">
-                            <h6 class="mb-0 text-truncate" style="max-width: 150px;" title="${displayName}">${displayName}</h6>
-                            <small class="text-muted" style="font-size: 0.7rem;">${dateStr}</small>
-                        </div>
-                        <p class="mb-1 small">ID: ${task.start_id} - ${task.end_id} ${statusBadge}</p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <small>已抓取: ${task.count}</small>
-                            <div>
-                                <button class="btn btn-outline-primary btn-sm py-0" style="font-size: 0.7rem;" onclick="loadTask('${task.filename}')">加载</button>
-                                <button class="btn btn-outline-secondary btn-sm py-0" style="font-size: 0.7rem;" onclick="editTask('${task.filename}', '${task.name}', ${task.start_id}, ${task.end_id}); event.stopPropagation();">编辑</button>
-                                <button class="btn btn-outline-danger btn-sm py-0" style="font-size: 0.7rem;" onclick="deleteTask('${task.filename}')">删除</button>
-                            </div>
-                        </div>
-                    `;
-                    list.appendChild(item);
-                    
-                    if (task.is_active) {
-                        activeTaskFilename = task.filename;
-                        updateUIForActiveTask(task);
-                    }
-                });
-                
-                if (!activeTaskFilename) {
-                    document.getElementById('controlPanel').style.display = 'none';
-                    document.getElementById('noTaskPanel').style.display = 'block';
-                    document.getElementById('activeTaskName').innerText = '未选择';
-                    document.getElementById('renameBtn').style.display = 'none';
-                }
-            } catch (e) {
-                console.error(e);
-            }
-        }
+          tasks.forEach((task) => {
+            const activeClass = task.is_active ? "active" : "";
+            // Format date nicely if possible, or just use raw
+            const dateStr = task.created_at.replace(
+              /(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/,
+              "$1-$2-$3 $4:$5"
+            );
 
-        async function createTask() {
-            const name = document.getElementById('taskName').value;
-            const startId = document.getElementById('startId').value;
-            const endId = document.getElementById('endId').value;
-            
-            if (!startId || !endId) {
-                alert('请输入起始和终止 ID');
-                return;
+            // Use task name as display name
+            const displayName = task.name || task.filename.replace(".json", "");
+
+            let statusBadge = "";
+            if (task.status === "completed") {
+              statusBadge =
+                '<span class="badge bg-success ms-1" style="font-size: 0.6rem;">已完成</span>';
             }
 
-            const sId = parseInt(startId);
-            const eId = parseInt(endId);
+            const item = document.createElement("div");
+            item.className = `list-group-item list-group-item-action ${activeClass}`;
+            item.innerHTML = `
+                      <div class="d-flex w-100 justify-content-between align-items-center mb-1">
+                          <h6 class="mb-0 text-truncate" style="max-width: 150px;" title="${displayName}">${displayName}</h6>
+                          <small class="text-muted" style="font-size: 0.7rem;">${dateStr}</small>
+                      </div>
+                      <p class="mb-1 small">页码: ${task.start_page} - ${task.end_page} ${statusBadge}</p>
+                      <div class="d-flex justify-content-between align-items-center">
+                          <small>已抓取: ${task.count}</small>
+                          <div>
+                              <button class="btn btn-outline-primary btn-sm py-0" style="font-size: 0.7rem;" onclick="loadTask('${task.filename}')">加载</button>
+                              <button class="btn btn-outline-secondary btn-sm py-0" style="font-size: 0.7rem;" onclick="editTask('${task.filename}', '${task.name}', ${task.start_page}, ${task.end_page}, '${task.task_type}', '${task.target_name}'); event.stopPropagation();">编辑</button>
+                              <button class="btn btn-outline-danger btn-sm py-0" style="font-size: 0.7rem;" onclick="deleteTask('${task.filename}')">删除</button>
+                          </div>
+                      </div>
+                  `;
+            list.appendChild(item);
 
-            if (isNaN(sId) || isNaN(eId) || sId <= 0 || eId <= 0) {
-                alert('ID 必须是正整数');
-                return;
+            if (task.is_active) {
+              activeTaskFilename = task.filename;
+              updateUIForActiveTask(task);
             }
+          });
 
-            if (sId > eId) {
-                alert('起始 ID 不能大于终止 ID');
-                return;
+          if (!activeTaskFilename) {
+            document.getElementById("controlPanel").style.display = "none";
+            document.getElementById("noTaskPanel").style.display = "block";
+            document.getElementById("activeTaskName").innerText = "未选择";
+            document.getElementById("renameBtn").style.display = "none";
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      async function createTask() {
+        const taskType = document.getElementById("taskType").value;
+        const targetName = document.getElementById("targetName").value;
+        // const name = document.getElementById("taskName").value;
+        const sPage = document.getElementById("startPage").value;
+        const ePage = document.getElementById("endPage").value;
+
+        if (!targetName || !sPage || !ePage) {
+          alert("请填写所有必填字段");
+          return;
+        }
+
+        try {
+          const res = await fetch("/api/tasks", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              task_type: taskType,
+              target_name: targetName,
+              // name: name,
+              start_page: sPage,
+              end_page: ePage,
+            }),
+          });
+          const data = await res.json();
+          if (data.status === "created") {
+            loadTaskList();
+            // Auto load
+            loadTask(data.filename);
+          } else {
+            if (data.error === "exists") {
+              if (
+                confirm(
+                  "该范围的任务已存在。是否要加载它？\n(您也可以稍后重命名它)"
+                )
+              ) {
+                loadTask(data.task.filename);
+              }
+            } else {
+              alert("创建失败: " + data.error);
             }
-            
-            try {
-                const res = await fetch('/api/tasks', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        name: name,
-                        start_id: sId,
-                        end_id: eId
-                    })
-                });
-                const data = await res.json();
-                if (data.status === 'created') {
-                    loadTaskList();
-                    // Auto load
-                    loadTask(data.filename);
-                } else {
-                    if (data.error === 'exists') {
-                        if (confirm('该范围的任务已存在。是否要加载它？\n(您也可以稍后重命名它)')) {
-                            loadTask(data.task.filename);
-                        }
-                    } else {
-                        alert('创建失败: ' + data.error);
-                    }
-                }
-            } catch (e) {
-                alert('Error: ' + e);
-            }
+          }
+        } catch (e) {
+          alert("Error: " + e);
         }
+      }
 
-        async function loadTask(filename) {
-            try {
-                const res = await fetch(`/api/tasks/${filename}/load`, { method: 'POST' });
-                const data = await res.json();
-                if (data.status === 'loaded') {
-                    activeTaskFilename = filename;
-                    loadTaskList(); // Refresh list to show active state
-                    startStatusPolling();
-                } else {
-                    alert(data.error);
-                }
-            } catch (e) {
-                alert('Error: ' + e);
-            }
-        }
-
-        async function deleteTask(filename) {
-            if (!confirm('确定要删除这个任务吗？数据将丢失。')) return;
-            
-            try {
-                const res = await fetch(`/api/tasks/${filename}`, { method: 'DELETE' });
-                const data = await res.json();
-                if (data.status === 'deleted') {
-                    if (activeTaskFilename === filename) {
-                        activeTaskFilename = null;
-                        stopStatusPolling();
-                    }
-                    loadTaskList();
-                } else {
-                    alert(data.error);
-                }
-            } catch (e) {
-                alert('Error: ' + e);
-            }
-        }
-        
-        async function renameActiveTask() {
-            if (!activeTaskFilename) return;
-            const currentName = document.getElementById('activeTaskName').innerText;
-            const newName = prompt("请输入新的任务名称:", currentName);
-            
-            if (newName && newName !== currentName) {
-                try {
-                    const res = await fetch(`/api/tasks/${activeTaskFilename}/rename`, {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ name: newName })
-                    });
-                    const data = await res.json();
-                    if (data.status === 'renamed') {
-                        activeTaskFilename = data.filename; // Update filename reference
-                        loadTaskList(); // Refresh list
-                    } else {
-                        alert('重命名失败: ' + data.error);
-                    }
-                } catch (e) {
-                    alert('Error: ' + e);
-                }
-            }
-        }
-
-        async function exportTask() {
-            if (!activeTaskFilename) return;
-            window.location.href = `/api/tasks/${activeTaskFilename}/export`;
-        }
-
-        function updateUIForActiveTask(task) {
-            document.getElementById('controlPanel').style.display = 'block';
-            document.getElementById('noTaskPanel').style.display = 'none';
-            document.getElementById('activeTaskName').innerText = task.name || task.filename;
-            document.getElementById('renameBtn').style.display = 'inline-block';
-        }
-        
-        // --- Edit Task ---
-        function editTask(filename, name, startId, endId) {
-            document.getElementById('taskFormHeader').innerText = '编辑任务';
-            document.getElementById('editTaskFilename').value = filename;
-            document.getElementById('taskName').value = name;
-            document.getElementById('startId').value = startId;
-            document.getElementById('endId').value = endId;
-            
-            document.getElementById('btnCreateTask').style.display = 'none';
-            document.getElementById('btnUpdateTask').style.display = 'block';
-            document.getElementById('btnCancelEdit').style.display = 'block';
-        }
-        
-        function cancelEdit() {
-            document.getElementById('taskFormHeader').innerText = '新建任务';
-            document.getElementById('editTaskFilename').value = '';
-            document.getElementById('taskName').value = '';
-            // Reset to empty
-            document.getElementById('startId').value = '';
-            document.getElementById('endId').value = '';
-            
-            document.getElementById('btnCreateTask').style.display = 'block';
-            document.getElementById('btnUpdateTask').style.display = 'none';
-            document.getElementById('btnCancelEdit').style.display = 'none';
-        }
-        
-        async function updateTask() {
-            const filename = document.getElementById('editTaskFilename').value;
-            const name = document.getElementById('taskName').value;
-            const startId = document.getElementById('startId').value;
-            const endId = document.getElementById('endId').value;
-            
-            if (!filename || !startId || !endId) return;
-            
-            try {
-                const res = await fetch(`/api/tasks/${filename}`, {
-                    method: 'PUT',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        name: name,
-                        start_id: parseInt(startId),
-                        end_id: parseInt(endId)
-                    })
-                });
-                const data = await res.json();
-                if (data.status === 'updated') {
-                    loadTaskList();
-                    cancelEdit();
-                    // If active task was updated, reload it?
-                    if (activeTaskFilename === filename || activeTaskFilename === data.filename) {
-                        loadTask(data.filename);
-                    }
-                } else {
-                    alert('更新失败: ' + data.error);
-                }
-            } catch (e) {
-                alert('Error: ' + e);
-            }
-        }
-
-        // --- Crawler Control ---
-
-        async function startCrawler() {
-            await fetch('/api/crawler/start', { method: 'POST' });
+      async function loadTask(filename) {
+        try {
+          const res = await fetch(`/api/tasks/${filename}/load`, {
+            method: "POST",
+          });
+          const data = await res.json();
+          if (data.status === "loaded") {
+            activeTaskFilename = filename;
+            loadTaskList(); // Refresh list to show active state
             startStatusPolling();
+          } else {
+            alert(data.error);
+          }
+        } catch (e) {
+          alert("Error: " + e);
         }
+      }
 
-        async function pauseCrawler() {
-            await fetch('/api/crawler/pause', { method: 'POST' });
+      async function deleteTask(filename) {
+        if (!confirm("确定要删除这个任务吗？数据将丢失。")) return;
+
+        try {
+          const res = await fetch(`/api/tasks/${filename}`, {
+            method: "DELETE",
+          });
+          const data = await res.json();
+          if (data.status === "deleted") {
+            if (activeTaskFilename === filename) {
+              activeTaskFilename = null;
+              stopStatusPolling();
+            }
+            loadTaskList();
+          } else {
+            alert(data.error);
+          }
+        } catch (e) {
+          alert("Error: " + e);
         }
+      }
 
-        async function stopCrawler() {
-            await fetch('/api/crawler/stop', { method: 'POST' });
-        }
+      async function renameActiveTask() {
+        if (!activeTaskFilename) return;
+        const currentName = document.getElementById("activeTaskName").innerText;
+        const newName = prompt("请输入新的任务名称:", currentName);
 
-        async function setDelay() {
-            const delay = document.getElementById('delayInput').value;
-            await fetch('/api/crawler/set_delay', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ delay: delay })
+        if (newName && newName !== currentName) {
+          try {
+            const res = await fetch(`/api/tasks/${activeTaskFilename}/rename`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name: newName }),
             });
-        }
-
-        async function checkIntegrity() {
-            // No confirmation needed
-            try {
-                const res = await fetch('/api/crawler/check_integrity', { method: 'POST' });
-                const data = await res.json();
-                if (data.status === 'checked') {
-                    alert(`检查完成！\n新增失败项目: ${data.added_count}\n当前失败总数: ${data.total_failed}`);
-                } else {
-                    alert('检查失败: ' + data.error);
-                }
-            } catch (e) {
-                alert('Error: ' + e);
-            }
-        }
-
-        async function retryFailed() {
-            const res = await fetch('/api/crawler/retry_failed', { method: 'POST' });
             const data = await res.json();
-            if (data.status === 'added_to_queue') {
-                alert(`已将 ${data.count} 个失败项目添加到重试队列`);
-            } else if (data.status === 'no_failed_ids') {
-                alert('没有失败项目');
+            if (data.status === "renamed") {
+              activeTaskFilename = data.filename; // Update filename reference
+              loadTaskList(); // Refresh list
+            } else {
+              alert("重命名失败: " + data.error);
             }
+          } catch (e) {
+            alert("Error: " + e);
+          }
         }
+      }
 
-        // --- Status Polling ---
+      async function exportTask() {
+        if (!activeTaskFilename) return;
+        window.location.href = `/api/tasks/${activeTaskFilename}/export`;
+      }
 
-        function startStatusPolling() {
-            if (statusInterval) clearInterval(statusInterval);
-            statusInterval = setInterval(updateStatus, 1000);
-            updateStatus();
-        }
+      function updateUIForActiveTask(task) {
+        document.getElementById("controlPanel").style.display = "block";
+        document.getElementById("noTaskPanel").style.display = "none";
+        document.getElementById("activeTaskName").innerText =
+          task.name || task.filename;
+        document.getElementById("renameBtn").style.display = "inline-block";
+      }
 
-        function stopStatusPolling() {
-            if (statusInterval) clearInterval(statusInterval);
-            statusInterval = null;
-        }
+      // --- Edit Task ---
+      function editTask(
+        filename,
+        name,
+        startPage,
+        endPage,
+        taskType,
+        targetName
+      ) {
+        document.getElementById("taskFormHeader").innerText = "编辑任务";
+        document.getElementById("editTaskFilename").value = filename;
+        // document.getElementById("taskName").value = name; // Name is auto-generated now mostly
+        document.getElementById("startPage").value = startPage;
+        document.getElementById("endPage").value = endPage;
+        document.getElementById("taskType").value = taskType;
+        document.getElementById("targetName").value = targetName;
 
-        async function updateStatus() {
-            if (!activeTaskFilename) return;
-            
-            try {
-                const res = await fetch('/api/crawler/status');
-                const data = await res.json();
-                
-                if (!data.active) return;
+        document.getElementById("btnCreateTask").style.display = "none";
+        document.getElementById("btnUpdateTask").style.display = "block";
+        document.getElementById("btnCancelEdit").style.display = "block";
+      }
 
-                // Auto refresh task list on status change (e.g. running -> completed/stopped)
-                if (lastStatus !== null && lastStatus !== data.status) {
-                    loadTaskList();
-                }
-                lastStatus = data.status;
+      function cancelEdit() {
+        document.getElementById("taskFormHeader").innerText = "新建任务";
+        document.getElementById("editTaskFilename").value = "";
+        // document.getElementById("taskName").value = "";
+        // Reset to empty
+        document.getElementById("startPage").value = "1";
+        document.getElementById("endPage").value = "";
+        document.getElementById("targetName").value = "";
 
-                // Update Badge
-                const badge = document.getElementById('crawlerStatusBadge');
-                if (data.running) {
-                    if (data.paused) {
-                        badge.className = 'badge bg-warning text-dark status-badge';
-                        badge.innerText = '已暂停';
-                    } else {
-                        badge.className = 'badge bg-success status-badge';
-                        badge.innerText = '运行中';
-                    }
-                } else {
-                    badge.className = 'badge bg-secondary status-badge';
-                    badge.innerText = '已停止';
-                }
+        document.getElementById("btnCreateTask").style.display = "block";
+        document.getElementById("btnUpdateTask").style.display = "none";
+        document.getElementById("btnCancelEdit").style.display = "none";
+      }
 
-                // Update Stats
-                // Use display_id if available, otherwise fallback to current_id
-                document.getElementById('currentId').innerText = (data.display_id !== undefined) ? data.display_id : data.current_id;
-                document.getElementById('crawledCount').innerText = data.count;
-                document.getElementById('failedCount').innerText = data.failed_count;
-                document.getElementById('queueSize').innerText = data.queue_size;
-                
-                const total = data.total;
-                // Calculate progress based on crawled count vs total range
-                // Or (current_id - start_id) / total
-                // Let's use (current_id - start_id + 1) / total for inclusive range
-                // But current_id might be start_id if nothing done yet.
-                
-                let progress = 0;
-                if (total > 0) {
-                    // If completed, force 100%
-                    if (data.status === 'completed') {
-                        progress = 100;
-                    } else {
-                        // Calculate how many items we have processed (crawled + failed)
-                        // This is better than relying on current_id which might jump
-                        // But current_id is the cursor.
-                        // Let's stick to cursor logic: (current_id - start_id) / total
-                        // If current_id is 31895 (start), progress is 0.
-                        // If current_id is 31896 (next), progress is 1/total.
-                        const processed = data.current_id - data.start_id;
-                        progress = (processed / total * 100).toFixed(1);
-                        if (progress > 100) progress = 100;
-                    }
-                }
-                
-                document.getElementById('progressBar').style.width = `${progress}%`;
-                document.getElementById('progressBar').innerText = `${progress}%`;
-                
-                if (data.status === 'completed') {
-                    document.getElementById('progressText').innerText = `${total} / ${total}`;
-                } else {
-                    document.getElementById('progressText').innerText = `${data.current_id - data.start_id} / ${total}`;
-                }
+      async function updateTask() {
+        const filename = document.getElementById("editTaskFilename").value;
+        // const name = document.getElementById("taskName").value;
+        const startPage = document.getElementById("startPage").value;
+        const endPage = document.getElementById("endPage").value;
+        const taskType = document.getElementById("taskType").value;
+        const targetName = document.getElementById("targetName").value;
 
-                // Update Current Info
-                const urlLink = document.getElementById('currentUrlLink');
-                urlLink.innerText = data.current_url || '-';
-                urlLink.href = data.current_url || '#';
-                
-                document.getElementById('currentTitle').innerText = data.current_title || '-';
-                document.getElementById('currentDesc').innerText = data.current_desc || '-';
+        if (!filename || !startPage || !endPage || !targetName) return;
 
-                // Update Logs
-                const logBox = document.getElementById('logBox');
-                if (data.logs && data.logs.length > 0) {
-                    logBox.innerHTML = data.logs.map(log => `<div>${log}</div>`).join('');
-                    logBox.scrollTop = logBox.scrollHeight;
-                }
-                
-                // Update delay input if changed externally
-                if (document.activeElement.id !== 'delayInput') {
-                    document.getElementById('delayInput').value = data.delay;
-                }
-
-            } catch (e) {
-                console.error('Status poll error', e);
+        try {
+          const res = await fetch(`/api/tasks/${filename}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: "", // Let backend regenerate name
+              start_page: parseInt(startPage),
+              end_page: parseInt(endPage),
+              task_type: taskType,
+              target_name: targetName,
+            }),
+          });
+          const data = await res.json();
+          if (data.status === "updated") {
+            loadTaskList();
+            cancelEdit();
+            // If active task was updated, reload it?
+            if (
+              activeTaskFilename === filename ||
+              activeTaskFilename === data.filename
+            ) {
+              loadTask(data.filename);
             }
+          } else {
+            alert("更新失败: " + data.error);
+          }
+        } catch (e) {
+          alert("Error: " + e);
         }
+      }
 
-        // Init
-        loadTaskList();
+      // --- Crawler Control ---
+
+      async function startCrawler() {
+        await fetch("/api/crawler/start", { method: "POST" });
+        startStatusPolling();
+      }
+
+      async function pauseCrawler() {
+        await fetch("/api/crawler/pause", { method: "POST" });
+      }
+
+      async function stopCrawler() {
+        await fetch("/api/crawler/stop", { method: "POST" });
+      }
+
+      async function setDelay() {
+        const delay = document.getElementById("delayInput").value;
+        await fetch("/api/crawler/set_delay", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ delay: delay }),
+        });
+      }
+
+      async function checkIntegrity() {
+        // No confirmation needed
+        try {
+          const res = await fetch("/api/crawler/check_integrity", {
+            method: "POST",
+          });
+          const data = await res.json();
+          if (data.status === "checked") {
+            alert(
+              `检查完成！\n新增失败项目: ${data.added_count}\n当前失败总数: ${data.total_failed}`
+            );
+          } else {
+            alert("检查失败: " + data.error);
+          }
+        } catch (e) {
+          alert("Error: " + e);
+        }
+      }
+
+      async function retryFailed() {
+        const res = await fetch("/api/crawler/retry_failed", {
+          method: "POST",
+        });
+        const data = await res.json();
+        if (data.status === "added_to_queue") {
+          alert(`已将 ${data.count} 个失败项目添加到重试队列`);
+        } else if (data.status === "no_failed_ids") {
+          alert("没有失败项目");
+        }
+      }
+
+      // --- Status Polling ---
+
+      function startStatusPolling() {
+        if (statusInterval) clearInterval(statusInterval);
+        statusInterval = setInterval(updateStatus, 1000);
+        updateStatus();
+      }
+
+      function stopStatusPolling() {
+        if (statusInterval) clearInterval(statusInterval);
+        statusInterval = null;
+      }
+
+      async function updateStatus() {
+        if (!activeTaskFilename) return;
+
+        try {
+          const res = await fetch("/api/crawler/status");
+          const data = await res.json();
+
+          if (!data.active) return;
+
+          // Auto refresh task list on status change (e.g. running -> completed/stopped)
+          if (lastStatus !== null && lastStatus !== data.status) {
+            loadTaskList();
+          }
+          lastStatus = data.status;
+
+          // Update Badge
+          const badge = document.getElementById("crawlerStatusBadge");
+          if (data.running) {
+            if (data.paused) {
+              badge.className = "badge bg-warning text-dark status-badge";
+              badge.innerText = "已暂停";
+            } else {
+              badge.className = "badge bg-success status-badge";
+              badge.innerText = "运行中";
+            }
+          } else {
+            badge.className = "badge bg-secondary status-badge";
+            badge.innerText = "已停止";
+          }
+
+          // Update Stats
+          // Use display_id if available, otherwise fallback to current_id
+          document.getElementById("currentId").innerText =
+            data.display_id !== undefined ? data.display_id : "-";
+          document.getElementById("crawledCount").innerText = data.count;
+          document.getElementById("failedCount").innerText = data.failed_count;
+          document.getElementById("queueSize").innerText = data.queue_size;
+
+          // Update Progress Bar
+          const total = data.total_pages;
+          const current = data.current_page - data.start_page;
+          const percent =
+            total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
+
+          const progressBar = document.getElementById("progressBar");
+          progressBar.style.width = percent + "%";
+          progressBar.innerText = percent + "%";
+
+          let displayPage = data.current_page;
+          if (displayPage > data.end_page) {
+            displayPage = data.end_page;
+          }
+
+          if (data.status === "completed") {
+            displayPage = data.end_page;
+            progressBar.style.width = "100%";
+            progressBar.innerText = "100%";
+            progressBar.className = "progress-bar bg-success";
+          } else {
+            progressBar.className = "progress-bar";
+          }
+
+          document.getElementById(
+            "progressText"
+          ).innerText = `${displayPage} / ${data.end_page}`;
+
+          // Update Runtime Info
+          document.getElementById("currentUrlLink").innerText =
+            data.current_url || "-";
+          document.getElementById("currentUrlLink").href =
+            data.current_url || "#";
+          document.getElementById("currentTitle").innerText =
+            data.current_title || "-";
+          document.getElementById("currentDesc").innerText =
+            data.current_desc || "-";
+
+          // Update Logs
+          const logBox = document.getElementById("logBox");
+          if (data.logs && data.logs.length > 0) {
+            logBox.innerHTML = data.logs
+              .map((log) => `<div>${log}</div>`)
+              .join("");
+            logBox.scrollTop = logBox.scrollHeight;
+          }
+
+          // Update Retry Button
+          const btnRetry = document.getElementById("btnRetryFailed");
+          if (data.failed_count > 0) {
+            btnRetry.innerText = `重试失败项目 (${data.failed_count})`;
+            btnRetry.className = "btn btn-danger";
+            btnRetry.disabled = false;
+          } else {
+            btnRetry.innerText = "重试失败项目 (0)";
+            btnRetry.className = "btn btn-outline-danger";
+            btnRetry.disabled = true;
+          }
+
+          // Update Delay Input
+          if (
+            document.activeElement !== document.getElementById("delayInput")
+          ) {
+            document.getElementById("delayInput").value = data.delay;
+          }
+        } catch (e) {
+          console.error("Status update error:", e);
+        }
+      }
+
+      // Init
+      loadTaskList();
     </script>
-</body>
+  </body>
 </html>

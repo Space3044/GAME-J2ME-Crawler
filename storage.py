@@ -25,9 +25,11 @@ class TaskManager:
                     tasks.append({
                         'filename': f,
                         'name': data.get('name', 'Unknown'),
-                        'start_id': data.get('start_id'),
-                        'end_id': data.get('end_id'),
-                        'current_id': data.get('current_id'),
+                        'task_type': data.get('task_type', 'unknown'),
+                        'target_name': data.get('target_name', ''),
+                        'start_page': data.get('start_page'),
+                        'end_page': data.get('end_page'),
+                        'current_page': data.get('current_page'),
                         'status': data.get('status', 'unknown'),
                         'created_at': data.get('created_at'),
                         'count': len(data.get('data', [])),
@@ -36,7 +38,7 @@ class TaskManager:
             except Exception as e:
                 print(f"Error reading task {f}: {e}")
 
-        # Sort by creation time desc
+        # 按创建时间降序排序
         tasks.sort(key=lambda x: x.get('created_at', ''), reverse=True)
         return tasks
 
@@ -47,38 +49,35 @@ class TaskManager:
                 return task
         return None
 
-    def create_task(self, start_id, end_id, name=None):
-        # Check for duplicates
-        existing = self.check_task_exists(start_id, end_id)
-        if existing:
-            return None, {'error': 'exists', 'task': existing}
+    def create_task(self, task_type, target_name, start_page, end_page, name=None):
+        # 任务类型: 'series' 或 'console'
+        # 目标名称: 'mario', 'nes' 等
 
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         if not name:
-            name = "Task"  # Default name without IDs
+            name = f"{task_type}_{target_name}"
 
-        # New naming convention: Name_Start_End.json
-        # Sanitize name to be safe for filename
+        # 净化名称
         safe_name = "".join([c for c in name if c.isalnum() or c in (
             ' ', '-', '_')]).strip().replace(' ', '_')
 
-        # Check if name already contains the ID range to avoid duplication
-        suffix = f"_{start_id}_{end_id}"
-        if safe_name.endswith(suffix):
-            filename = f"{safe_name}.json"
-        else:
-            filename = f"{safe_name}_{start_id}_{end_id}.json"
+        # 文件名: Name_pStart_pEnd.json
+        filename = f"{safe_name}_p{start_page}_p{end_page}.json"
 
         task_data = {
             'name': name,
             'filename': filename,
-            'start_id': int(start_id),
-            'end_id': int(end_id),
-            'current_id': int(start_id),
+            'task_type': task_type,
+            'target_name': target_name,
+            'start_page': int(start_page),
+            'end_page': int(end_page),
+            'current_page': int(start_page),
             'status': 'ready',
             'created_at': timestamp,
             'data': [],
-            'failed_ids': [],
+            'discovered_ids': [],  # 所有已发现的ID列表
+            'failed_ids': [],     # 失败的游戏ID
+            'failed_pages': [],   # 失败的列表页
             'custom_queue': [],
             'delay': 1.0
         }
@@ -86,43 +85,48 @@ class TaskManager:
         self.save_task(filename, task_data)
         return filename, task_data
 
-    def rename_task(self, old_filename, new_name):
+    def update_task_metadata(self, old_filename, new_name, new_start_page, new_end_page, new_task_type=None, new_target_name=None):
         task_data = self.load_task(old_filename)
         if not task_data:
             return None, "Task not found"
 
-        start_id = task_data['start_id']
-        end_id = task_data['end_id']
+        # 更新字段
+        task_data['start_page'] = int(new_start_page)
+        task_data['end_page'] = int(new_end_page)
 
-        # Generate new filename
+        if new_task_type:
+            task_data['task_type'] = new_task_type
+        if new_target_name:
+            task_data['target_name'] = new_target_name
+
+        # 如果未提供名称或为空，则根据类型/目标重新生成
+        if not new_name:
+            new_name = f"{task_data['task_type']}_{task_data['target_name']}"
+
+        task_data['name'] = new_name
+
+        # 生成新文件名
         safe_name = "".join([c for c in new_name if c.isalnum() or c in (
             ' ', '-', '_')]).strip().replace(' ', '_')
 
-        # Check if name already contains the ID range to avoid duplication
-        suffix = f"_{start_id}_{end_id}"
-        if safe_name.endswith(suffix):
-            new_filename = f"{safe_name}.json"
-        else:
-            new_filename = f"{safe_name}_{start_id}_{end_id}.json"
+        new_filename = f"{safe_name}_p{new_start_page}_p{new_end_page}.json"
 
         if new_filename == old_filename:
-            # Just update the display name inside
-            task_data['name'] = new_name
+            # 仅更新内容
             self.save_task(old_filename, task_data)
             return old_filename, None
 
-        # Check if new filename already exists (unlikely unless name collision)
+        # 检查新文件名是否已存在
         if os.path.exists(self._get_file_path(new_filename)):
-            return None, "A task with this name and range already exists"
+            return None, "A task with this configuration already exists"
 
-        # Update data
-        task_data['name'] = new_name
+        # 更新数据中的文件名
         task_data['filename'] = new_filename
 
-        # Save new file
+        # 保存新文件
         self.save_task(new_filename, task_data)
 
-        # Delete old file
+        # 删除旧文件
         self.delete_task(old_filename)
 
         return new_filename, None
@@ -136,17 +140,17 @@ class TaskManager:
 
     def save_task(self, filename, data):
         path = self._get_file_path(filename)
-        # Ensure data is sorted by ID before saving
+        # 保存前确保数据按ID排序
         if 'data' in data and isinstance(data['data'], list):
             data['data'].sort(key=lambda x: x.get('ID', 0))
 
-        # Atomic write: write to temp file then rename
+        # 原子写入：写入临时文件然后重命名
         temp_path = path + '.tmp'
         try:
             with open(temp_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
 
-            # Rename is atomic on POSIX, and atomic replace on Windows (Python 3.3+)
+            # 重命名在POSIX上是原子的，在Windows上也是原子替换 (Python 3.3+)
             os.replace(temp_path, path)
         except Exception as e:
             print(f"Error saving task {filename}: {e}")
@@ -162,40 +166,3 @@ class TaskManager:
             os.remove(path)
             return True
         return False
-
-    def update_task_metadata(self, old_filename, new_name, new_start_id, new_end_id):
-        task_data = self.load_task(old_filename)
-        if not task_data:
-            return None, "Task not found"
-
-        # Sanitize name
-        safe_name = "".join([c for c in new_name if c.isalnum() or c in (
-            ' ', '-', '_')]).strip().replace(' ', '_')
-
-        # Check if name already contains the ID range to avoid duplication
-        suffix = f"_{new_start_id}_{new_end_id}"
-        if safe_name.endswith(suffix):
-            new_filename = f"{safe_name}.json"
-        else:
-            new_filename = f"{safe_name}_{new_start_id}_{new_end_id}.json"
-
-        # Check if filename changes and if target exists
-        if new_filename != old_filename and os.path.exists(self._get_file_path(new_filename)):
-            return None, "A task with this name and range already exists"
-
-        # Update data
-        task_data['name'] = new_name
-        task_data['start_id'] = int(new_start_id)
-        task_data['end_id'] = int(new_end_id)
-        task_data['filename'] = new_filename
-
-        # If start/end changed, we might want to reset current_id if it's out of bounds?
-        # But user said "edit task", implying just metadata update.
-        # We'll leave current_id alone unless it's completely invalid, but let's trust the user.
-
-        self.save_task(new_filename, task_data)
-
-        if new_filename != old_filename:
-            self.delete_task(old_filename)
-
-        return new_filename, None

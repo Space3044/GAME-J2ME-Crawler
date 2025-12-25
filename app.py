@@ -32,26 +32,29 @@ def list_tasks():
 @app.route('/api/tasks', methods=['POST'])
 def create_task():
     data = request.json
-    start_id = data.get('start_id')
-    end_id = data.get('end_id')
+    task_type = data.get('task_type')  # 'series' or 'console'
+    target_name = data.get('target_name')
+    start_page = data.get('start_page')
+    end_page = data.get('end_page')
     name = data.get('name')
 
-    if start_id is None or end_id is None:
-        return jsonify({'error': 'Missing start_id or end_id'}), 400
+    if not task_type or not target_name or start_page is None or end_page is None:
+        return jsonify({'error': 'Missing required parameters'}), 400
 
     try:
-        start_id = int(start_id)
-        end_id = int(end_id)
+        start_page = int(start_page)
+        end_page = int(end_page)
     except ValueError:
-        return jsonify({'error': 'IDs must be integers'}), 400
+        return jsonify({'error': 'Pages must be integers'}), 400
 
-    if start_id <= 0 or end_id <= 0:
-        return jsonify({'error': 'IDs must be positive integers'}), 400
+    if start_page <= 0 or end_page <= 0:
+        return jsonify({'error': 'Pages must be positive integers'}), 400
 
-    if start_id > end_id:
-        return jsonify({'error': 'Start ID cannot be greater than End ID'}), 400
+    if start_page > end_page:
+        return jsonify({'error': 'Start Page cannot be greater than End Page'}), 400
 
-    result = task_manager.create_task(start_id, end_id, name)
+    result = task_manager.create_task(
+        task_type, target_name, start_page, end_page, name)
     if result[0] is None:
         # Error occurred
         return jsonify(result[1]), 400
@@ -94,36 +97,38 @@ def update_task(filename):
 
     data = request.json
     new_name = data.get('name')
-    new_start_id = data.get('start_id')
-    new_end_id = data.get('end_id')
+    new_start_page = data.get('start_page')
+    new_end_page = data.get('end_page')
+    new_task_type = data.get('task_type')
+    new_target_name = data.get('target_name')
 
-    if not new_name or new_start_id is None or new_end_id is None:
-        return jsonify({'error': 'Missing parameters'}), 400
+    if new_start_page is None or new_end_page is None:
+        return jsonify({'error': 'Missing page parameters'}), 400
 
     try:
-        new_start_id = int(new_start_id)
-        new_end_id = int(new_end_id)
+        new_start_page = int(new_start_page)
+        new_end_page = int(new_end_page)
     except ValueError:
-        return jsonify({'error': 'IDs must be integers'}), 400
+        return jsonify({'error': 'Pages must be integers'}), 400
 
-    if new_start_id <= 0 or new_end_id <= 0:
-        return jsonify({'error': 'IDs must be positive integers'}), 400
+    if new_start_page <= 0 or new_end_page <= 0:
+        return jsonify({'error': 'Pages must be positive integers'}), 400
 
-    if new_start_id > new_end_id:
-        return jsonify({'error': 'Start ID cannot be greater than End ID'}), 400
+    if new_start_page > new_end_page:
+        return jsonify({'error': 'Start Page cannot be greater than End Page'}), 400
 
     # 加载旧任务以便在更新前进行比较
     old_task = task_manager.load_task(filename)
     if not old_task:
         return jsonify({'error': 'Task not found'}), 404
 
-    old_start = old_task.get('start_id')
-    old_end = old_task.get('end_id')
-    current_id = old_task.get('current_id')
+    old_start = old_task.get('start_page')
+    old_end = old_task.get('end_page')
+    current_page = old_task.get('current_page')
     status = old_task.get('status')
 
     new_filename, error = task_manager.update_task_metadata(
-        filename, new_name, new_start_id, new_end_id)
+        filename, new_name, new_start_page, new_end_page, new_task_type, new_target_name)
     if error:
         return jsonify({'error': error}), 400
 
@@ -132,18 +137,25 @@ def update_task(filename):
     if new_task:
         updated_logic = False
 
-        # 1. 处理起始ID变更 (如果新起始ID小于当前进度，重置进度)
-        if int(new_start_id) < current_id:
-            new_task['current_id'] = int(new_start_id)
+        # 1. 处理起始页变更 (如果新起始页小于当前进度，重置进度)
+        if int(new_start_page) < current_page:
+            new_task['current_page'] = int(new_start_page)
             new_task['status'] = 'stopped'  # 如果回退，重置状态
             updated_logic = True
 
-        # 2. 处理结束ID扩展
-        if int(new_end_id) > old_end and status == 'completed':
+        # 2. 处理结束页扩展
+        if int(new_end_page) > old_end and status == 'completed':
             # 我们扩展了已完成任务的范围
             # 应该从上次结束的地方继续
             # 因为卡在 old_end，所以从 old_end + 1 开始
-            new_task['current_id'] = old_end + 1
+            new_task['current_page'] = old_end + 1
+            new_task['status'] = 'stopped'
+            updated_logic = True
+
+        # 3. 如果更改了类型或目标，可能需要重置状态
+        if new_task_type != old_task.get('task_type') or new_target_name != old_task.get('target_name'):
+            # 如果目标变了，之前的 discovered_ids 可能无效，但 data 可能想保留？
+            # 简单起见，如果目标变了，我们不清除数据，但重置状态
             new_task['status'] = 'stopped'
             updated_logic = True
 
@@ -272,18 +284,18 @@ def crawler_status():
     # 如果爬虫正在运行此任务，使用内存数据更新进度字段
     # 这样可以提供流畅的UI更新，而无需频繁的磁盘I/O
     if crawler.running and crawler.task_data and crawler.task_data.get('filename') == active_task_filename:
-        current_id = crawler.task_data.get('current_id')
+        current_page = crawler.task_data.get('current_page')
         count = len(crawler.task_data.get('data', []))
         failed_count = len(crawler.task_data.get('failed_ids', []))
         queue_size = len(crawler.task_data.get('custom_queue', []))
     else:
-        current_id = td.get('current_id')
+        current_page = td.get('current_page')
         count = len(td.get('data', []))
         failed_count = len(td.get('failed_ids', []))
         queue_size = len(td.get('custom_queue', []))
 
     # 确定 display_id (显示为 "当前ID" 的内容)
-    display_id = current_id
+    display_id = "-"
 
     if crawler.running and crawler.task_data and crawler.task_data.get('filename') == active_task_filename:
         if hasattr(crawler, 'processing_id') and crawler.processing_id is not None:
@@ -313,11 +325,11 @@ def crawler_status():
         'logs': crawler.logs,
 
         # 进度信息（内存或文件）
-        'current_id': current_id,
+        'current_page': current_page,
         'display_id': display_id,
-        'total': td.get('end_id') - td.get('start_id') + 1,
-        'start_id': td.get('start_id'),
-        'end_id': td.get('end_id'),
+        'total_pages': td.get('end_page') - td.get('start_page') + 1,
+        'start_page': td.get('start_page'),
+        'end_page': td.get('end_page'),
         'count': count,
         'failed_count': failed_count,
         'queue_size': queue_size,
@@ -363,15 +375,13 @@ def check_integrity():
     if not td:
         return jsonify({'error': 'Task data not found'}), 404
 
-    start_id = td.get('start_id')
-    end_id = td.get('end_id')
     data_list = td.get('data', [])
     failed_ids = td.get('failed_ids', [])
+    discovered_ids = set(td.get('discovered_ids', []))
 
-    # 1. 查找缺失的ID
+    # 1. 查找缺失的ID (已发现但未抓取)
     crawled_ids = set(item['ID'] for item in data_list)
-    all_ids = set(range(start_id, end_id + 1))
-    missing_ids = all_ids - crawled_ids
+    missing_ids = discovered_ids - crawled_ids
 
     # 2. 查找无效项目（标题为空或特定错误标题）
     invalid_ids = set()
@@ -390,14 +400,8 @@ def check_integrity():
             failed_ids.append(fid)
             added_count += 1
 
-    # 我们不从数据列表中删除无效项目。
-    # 它们将在重新抓取时被覆盖。
-
     # 保存更改
     if using_memory:
-        # 爬虫正在运行，它最终会保存，但我们更新了引用
-        # 我们可能应该强制保存或让循环处理它。
-        # 但直接修改 crawler.task_data 是安全的，因为它是一个引用。
         pass
     else:
         task_manager.save_task(active_task_filename, td)
